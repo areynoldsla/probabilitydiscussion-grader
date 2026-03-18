@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Discussion Draft Checker — Probabilistic Reasoning</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1a2e; --ink2: #3d3d5c; --ink3: #7a7a9a;
+    --paper: #faf8f4; --paper2: #f2efe8; --paper3: #e8e4d9;
+    --accent: #c0392b; --accent2: #e8d5b0; --gold: #b8860b;
+    --warn: #7d4e1a; --radius: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Source Sans 3', sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh; }
+  header { background: var(--ink); color: var(--paper); padding: 2.5rem 2rem 2rem; text-align: center; border-bottom: 4px solid var(--accent); }
+  header h1 { font-family: 'Playfair Display', serif; font-size: clamp(1.4rem, 4vw, 2rem); font-weight: 600; margin-bottom: 0.4rem; }
+  header p { font-size: 0.95rem; color: #b0aec8; font-weight: 300; }
+  .notice-bar { background: var(--accent2); border-left: 4px solid var(--gold); padding: 1rem 1.5rem; margin: 1.5rem auto; max-width: 780px; border-radius: 0 var(--radius) var(--radius) 0; font-size: 0.88rem; color: var(--warn); line-height: 1.6; }
+  .notice-bar strong { font-weight: 600; display: block; margin-bottom: 0.2rem; }
+  .notice-bar ul { padding-left: 1.2rem; margin-top: 0.4rem; }
+  .notice-bar li { margin-bottom: 0.2rem; }
+  main { max-width: 780px; margin: 0 auto; padding: 0 1.2rem 3rem; }
+  .section-label { font-family: 'Playfair Display', serif; font-size: 1.15rem; font-weight: 600; color: var(--ink); margin: 2rem 0 0.8rem; padding-bottom: 0.4rem; border-bottom: 2px solid var(--paper3); display: flex; align-items: baseline; gap: 0.6rem; }
+  .section-label span { font-family: 'Source Sans 3', sans-serif; font-size: 0.78rem; font-weight: 500; color: var(--ink3); text-transform: uppercase; letter-spacing: 0.06em; }
+  .field-group { margin-bottom: 1.1rem; }
+  label { display: block; font-size: 0.88rem; font-weight: 600; color: var(--ink2); margin-bottom: 0.35rem; }
+  label .sub { font-weight: 300; color: var(--ink3); font-size: 0.83rem; }
+  select, textarea { width: 100%; font-family: 'Source Sans 3', sans-serif; font-size: 0.92rem; color: var(--ink); background: white; border: 1.5px solid var(--paper3); border-radius: var(--radius); padding: 0.65rem 0.85rem; transition: border-color 0.2s; resize: vertical; }
+  select:focus, textarea:focus { outline: none; border-color: var(--ink2); }
+  textarea { min-height: 130px; line-height: 1.6; }
+  .submit-wrap { margin-top: 2rem; text-align: center; }
+  button#submitBtn { background: var(--accent); color: white; border: none; padding: 0.85rem 2.8rem; font-family: 'Source Sans 3', sans-serif; font-size: 1rem; font-weight: 600; border-radius: var(--radius); cursor: pointer; transition: background 0.2s, transform 0.1s; }
+  button#submitBtn:hover { background: #a93226; }
+  button#submitBtn:active { transform: scale(0.98); }
+  #loading { display: none; text-align: center; padding: 2.5rem 1rem; color: var(--ink3); font-size: 0.95rem; }
+  .spinner { width: 36px; height: 36px; border: 3px solid var(--paper3); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #results { display: none; margin-top: 2rem; }
+  .result-header { background: var(--ink); color: var(--paper); padding: 1.2rem 1.5rem; border-radius: var(--radius) var(--radius) 0 0; display: flex; align-items: center; justify-content: space-between; }
+  .result-header h2 { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 600; }
+  .total-pill { background: var(--accent); color: white; padding: 4px 14px; border-radius: 99px; font-size: 0.95rem; font-weight: 600; }
+  .result-body { background: white; border: 1.5px solid var(--paper3); border-top: none; border-radius: 0 0 var(--radius) var(--radius); padding: 1.5rem; }
+  .q-result { padding: 1rem 0; border-bottom: 1px solid var(--paper2); }
+  .q-result:last-child { border-bottom: none; padding-bottom: 0; }
+  .q-result-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.6rem; }
+  .q-result-head strong { font-size: 0.95rem; font-weight: 600; color: var(--ink); }
+  .score-badge { font-size: 0.85rem; font-weight: 600; padding: 3px 12px; border-radius: 99px; }
+  .score-full { background: #d4edda; color: #155724; }
+  .score-part { background: #fff3cd; color: #856404; }
+  .score-low  { background: #f8d7da; color: #721c24; }
+  .q-result p { font-size: 0.9rem; color: var(--ink2); line-height: 1.65; margin-top: 0.3rem; }
+  .feedback-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink3); margin-top: 0.6rem; margin-bottom: 0.2rem; }
+  .disclaimer { background: var(--paper2); border-radius: var(--radius); padding: 0.9rem 1.1rem; margin-top: 1.5rem; font-size: 0.82rem; color: var(--ink3); line-height: 1.6; border-left: 3px solid var(--paper3); }
+  .try-again { display: block; margin: 1.5rem auto 0; background: transparent; border: 2px solid var(--ink); color: var(--ink); padding: 0.7rem 2rem; font-family: 'Source Sans 3', sans-serif; font-size: 0.95rem; font-weight: 600; border-radius: var(--radius); cursor: pointer; transition: background 0.2s, color 0.2s; }
+  .try-again:hover { background: var(--ink); color: white; }
+  .error-bar { background: #f8d7da; color: #721c24; border-radius: var(--radius); padding: 0.8rem 1rem; margin-top: 1rem; font-size: 0.88rem; display: none; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Discussion Draft Checker</h1>
+  <p>Probabilistic Reasoning — Get feedback before you submit</p>
+</header>
+<main>
+  <div class="notice-bar">
+    <strong>📌 Please read before using this tool</strong>
+    <ul>
+      <li><strong>This is a draft feedback tool, not your official grade.</strong> Your instructor will grade your final submission and their score may differ.</li>
+      <li>This tool has access to all five source articles, so feedback on your examples will be specific.</li>
+      <li>Getting a high score here does not guarantee a high grade — use this to identify gaps and improve your thinking.</li>
+      <li>The goal is to help you understand the material more deeply before your final submission.</li>
+    </ul>
+  </div>
+
+  <form id="gradingForm">
+    <div class="section-label">A. Your Post <span>9 points — 3 questions required</span></div>
+
+    <div class="field-group">
+      <label>Question 1 — Argument by Analogy <span class="sub">(required)</span></label>
+      <textarea id="q1" rows="7" placeholder="Paste your full answer to Question 1 here (both parts a and b)..."></textarea>
+    </div>
+
+    <div class="field-group">
+      <label>Which Question 2 option did you choose?</label>
+      <select id="q2choice">
+        <option value="">— Select one —</option>
+        <option value="inductive">Option 1 — Enumerative Induction / Inductive Generalization (Gun Violence)</option>
+        <option value="random">Option 2 — Random Sampling (Cosmopolitan Poll)</option>
+      </select>
+    </div>
+
+    <div class="field-group">
+      <label>Question 2 — Your Answer <span class="sub">(required)</span></label>
+      <textarea id="q2" rows="7" placeholder="Paste your full answer to Question 2 here..."></textarea>
+    </div>
+
+    <div class="field-group">
+      <label>Which Question 3 option did you choose?</label>
+      <select id="q3choice">
+        <option value="">— Select one —</option>
+        <option value="failure">Option 1 — Two Ways Inductive Generalization Can Fail (Supreme Court)</option>
+        <option value="literary">Option 2 — Literary Analogy vs. Argument by Analogy (Romeo and Juliet)</option>
+      </select>
+    </div>
+
+    <div class="field-group">
+      <label>Question 3 — Your Answer <span class="sub">(required)</span></label>
+      <textarea id="q3" rows="7" placeholder="Paste your full answer to Question 3 here..."></textarea>
+    </div>
+
+    <div class="section-label">B & C. Comment & Reply <span>1 point total — optional</span></div>
+
+    <div class="field-group">
+      <label>Your comment on a classmate's post <span class="sub">(optional)</span></label>
+      <textarea id="comment" rows="4" placeholder="Paste your comment here..."></textarea>
+    </div>
+
+    <div class="field-group">
+      <label>Your reply to a comment on your post <span class="sub">(optional)</span></label>
+      <textarea id="reply" rows="4" placeholder="Paste your reply here..."></textarea>
+    </div>
+
+    <div id="error-bar" class="error-bar"></div>
+    <div class="submit-wrap">
+      <button type="button" id="submitBtn" onclick="gradeSubmission()">Check My Draft</button>
+    </div>
+  </form>
+
+  <div id="loading">
+    <div class="spinner"></div>
+    Reviewing your draft — this may take a moment...
+  </div>
+
+  <div id="results"></div>
+</main>
+
+<script>
+const ARTICLES = {
+  q1: `Greg Abbott Flood and Football Analogy (Texas Monthly, July 9, 2025): Governor Abbott held a press conference after catastrophic Hill Country flooding killed 100+ people. He drew an analogy to a 2021 viral clip of UT defensive line coach Bo Davis, who snapped at players laughing on the team bus after a 30-7 loss to Iowa State. Davis's passionate response was later credited as a turning point toward the Longhorns becoming playoff contenders. Abbott invoked this football scenario in the context of the government's flood response. Author Dan Solomon calls this "bizarre." KEY ELEMENTS: Analog 1 = Texas Longhorns football team losing a game, Bo Davis demanding serious accountability. Analog 2 = Texas government responding to a deadly flood disaster. Similarities Abbott implies: Both involve a serious loss/failure; both require passionate accountability rather than laughing it off. Conclusion: Government flood response should reflect the same no-excuses accountability as a successful football program. Key dissimilarities: (1) Football loss is voluntary with no victims; flood killed 100+ people. (2) Players laughing on a bus is an attitude problem; flood victims need material aid and government competence. (3) Football team caused its own loss; government did not cause the flood. (4) Analogy deflects from policy failures by reframing disaster as a question of attitude.`,
+  inductive: `Gun Violence in America (Everytown Research, updated Jan 9, 2026): ~130 people killed with guns daily; 200+ wounded. Average 46,684 gun deaths/year (2020-2024). ~6 in 10 gun deaths are suicides. US gun suicide rate is 12x other high-income countries. Access to gun triples suicide risk. White men = 70% of firearm suicides. 4+ in 10 gun deaths are homicides. US gun homicide rate is 26x other high-income countries. Gun homicides concentrated in cities — large portion in just 42 cities. Black Americans 12x more likely to die by gun homicide. Firearms = leading cause of death for children and teens. 2,900+ children die by gun homicide/year. Black children 19x more likely to die by gun homicide. ~6 million women reported gun used on them by intimate partner. 59% of adults know someone who experienced gun violence. Data: CDC WONDER 2020-2024, FBI crime data from ~600 cities, peer-reviewed studies. Published by Everytown for Gun Safety (advocacy organization). KEY ELEMENTS: Target group = all people in US affected by gun violence. Sample = CDC/FBI data cases. Relevant property = rate, type, demographics, impact of gun violence. Sample size = large multi-year national dataset = strong. Representativeness = mostly strong; data gaps acknowledged; Everytown is advocacy org but underlying CDC/FBI are government sources. Warranted conclusion = gun violence is a pervasive national crisis disproportionately affecting Black Americans, women, and children, with suicide as majority of deaths.`,
+  random: `Cosmopolitan Poll "What Gen Z Really Thinks About the 2024 Election" (Oct 2, 2024): Online survey of 712 US adults ages 18-27 conducted by Cosmopolitan and SurveyMonkey, September 2024. 82% of voting-age Gen Z said they plan to vote; ~70% said "definitely." Part of Cosmopolitan's "The Youth Vote" project. Gen Z = ~70 million people. KEY ELEMENTS: Target group = Gen Z Americans ages 18-27 (~70 million). This is NOT a random sample — it is an opt-in convenience sample. Problems: (1) Cosmopolitan readership skews female and progressive. (2) Self-selection: participants chose to take survey. (3) Online-only excludes Gen Z without internet access. (4) 712 respondents is very small relative to ~70 million. (5) Findings "stand apart from" headlines about Gen Z fatalism — may reflect biased sample. Conclusion: Poll does NOT adequately represent all Gen Z.`,
+  failure: `Supreme Court Opinion (Newsweek, Aug 19, 2024, retired judge Thomas Moukawsher): Article argues public discourse about the Supreme Court commits two fallacies. Hasty generalization: Critics select only controversial bad decisions (Citizens United 2010, DC v. Heller 2008, abortion, gerrymandering, presidential immunity) and conclude ALL Court decisions are bad. Author counters by listing many recent balanced/unanimous decisions: unanimously rejected forcing workers to arbitrate wage claims; upheld firearm restrictions under domestic violence orders; protected defendants from double jeopardy; rejected challenge to FDA abortion pill standards; and more. False equivalency: Comparing Justice Thomas accepting luxury vacations vs. Senator Menendez convicted of accepting gold bars from foreign government — not equivalent. KEY ELEMENTS: Two failure modes students must name: (1) TOO-SMALL SAMPLE — a handful of controversial rulings out of hundreds over decades is too small to generalize. (2) UNREPRESENTATIVE/BIASED SAMPLE — critics cherry-pick only the worst decisions, ignoring many balanced/unanimous rulings. "Hasty generalization" alone is NOT a sufficient answer — it is the name of the fallacy, not the two failure modes.`,
+  literary: `Romeo and Juliet Act 2 Scene 2 (Shakespeare): Juliet's balcony speech. She argues Romeo's name — Montague — is not part of who he actually is. A name is just a label: if we called a rose by another name it would still smell as sweet. Therefore Romeo, called something other than Montague, would still be the same person. She asks him to give up his name. KEY ELEMENTS: This is primarily a LITERARY analogy. Analog 1 = a rose (name is arbitrary, separate from its essence). Analog 2 = Romeo (name Montague argued to be arbitrary, separate from his true self). Similarity: in both cases the name doesn't determine intrinsic worth. Conclusion Juliet draws: Romeo's name can be discarded. Purpose of literary analogy: to illuminate, express, or persuade rhetorically — not logical inference. Purpose of argument by analogy: to support a probable conclusion through relevant similarities. Key dissimilarities making it weak as logical argument: (1) A rose has no social identity, family obligations, or legal consequences tied to its name — Romeo does. (2) Human names carry identity, heritage, social meaning that botanical labels do not. (3) Speech is emotionally driven, not logically analytical.`
+};
+
+async function gradeSubmission() {
+  const q1 = document.getElementById('q1').value.trim();
+  const q2 = document.getElementById('q2').value.trim();
+  const q3 = document.getElementById('q3').value.trim();
+  const q2c = document.getElementById('q2choice').value;
+  const q3c = document.getElementById('q3choice').value;
+  const comment = document.getElementById('comment').value.trim();
+  const reply = document.getElementById('reply').value.trim();
+  const errBar = document.getElementById('error-bar');
+
+  if (!q1 || !q2 || !q3) { errBar.textContent = 'Please fill in all three post answers.'; errBar.style.display = 'block'; return; }
+  if (!q2c || !q3c) { errBar.textContent = 'Please select which option you chose for Questions 2 and 3.'; errBar.style.display = 'block'; return; }
+  errBar.style.display = 'none';
+
+  document.getElementById('gradingForm').style.display = 'none';
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('results').style.display = 'none';
+
+  const q2label = q2c === 'inductive' ? 'Option 1 — Enumerative Induction (Gun Violence)' : 'Option 2 — Random Sampling (Cosmopolitan Poll)';
+  const q3label = q3c === 'failure' ? 'Option 1 — Two Ways Inductive Generalization Can Fail (Supreme Court)' : 'Option 2 — Literary Analogy vs. Argument by Analogy (Romeo and Juliet)';
+  const q2art = q2c === 'inductive' ? ARTICLES.inductive : ARTICLES.random;
+  const q3art = q3c === 'failure' ? ARTICLES.failure : ARTICLES.literary;
+
+  const prompt = `You are a logic and critical thinking instructor grading a student discussion post on Probabilistic Reasoning. Use the rubric and source articles below. Return ONLY raw JSON, no preamble, no markdown fences.
+
+RUBRIC:
+3/3: All lettered sub-parts answered thoroughly, at least 7 complete complex sentences, accurate concept understanding, correct application to the example, appropriate terminology.
+2/3: Most sub-parts addressed, one missing or underdeveloped, slightly under 7 sentences or too simple, mostly correct with minor errors.
+1/3: Multiple sub-parts missing or substantially incorrect, significantly too short, major conceptual misunderstandings.
+0/3: Not answered, off-topic, or plagiarized.
+Comment/Reply 0.5: substantive engagement. Zero if mere compliment, agreement, or thanks.
+
+Q1 REQUIREMENTS: (a) Name and explain ALL criteria: number of similarities, relevance of similarities, number of analogs, diversity of analogs, modesty/strength of conclusion. (b) Identify BOTH analogs; list stated similarities under each; state Abbott's conclusion; apply criteria; provide at least one relevant dissimilarity to attack the argument. Min 7 sentences.
+Q2 REQUIREMENTS (${q2label}): ${q2c === 'inductive' ? '(a) Define target group, sample members, relevant property. (b) Identify each in Everytown report; evaluate sample size (large multi-year = strong) and representativeness (mostly strong, data gaps, advocacy org); state warranted conclusion.' : '(a) Define random sampling: every member has equal independent chance. (b) Explain what truly random selection requires. (c) Evaluate Cosmopolitan poll: identify as opt-in convenience sample; note self-selection, skewed readership, small sample vs 70M Gen Z; conclude does NOT represent all Gen Z.'} Min 7 sentences.
+Q3 REQUIREMENTS (${q3label}): ${q3c === 'failure' ? '(a) Name BOTH failure modes: (1) too-small sample AND (2) unrepresentative/biased sample. "Hasty generalization" alone is NOT sufficient. (b) Apply to Supreme Court article: critics cherry-pick only bad decisions = both too small AND unrepresentative/biased.' : '(a) Distinguish literary analogy (rhetorical) from argument by analogy (inferential). (b) State purpose of each. (c) Romeo/Juliet is primarily literary analogy; if treated as argument identify dissimilarities: Romeo\'s name has real social/familial consequences unlike a flower\'s name.'} Min 7 sentences.
+
+SOURCE ARTICLES:
+${ARTICLES.q1}
+${q2art}
+${q3art}
+
+STUDENT SUBMISSION:
+Q1: ${q1}
+Q2 (${q2label}): ${q2}
+Q3 (${q3label}): ${q3}
+COMMENT: ${comment || '[not provided]'}
+REPLY: ${reply || '[not provided]'}
+
+Return ONLY this JSON:
+{"q1":{"score":<0-3>,"earned":"<1-2 sentences specific to their answer>","improve":"<2-3 sentences referencing actual article content>"},"q2":{"score":<0-3>,"earned":"<1-2 sentences>","improve":"<2-3 sentences>"},"q3":{"score":<0-3>,"earned":"<1-2 sentences>","improve":"<2-3 sentences>"},"comment":{"score":<0 or 0.5>,"feedback":"<1-2 sentences>"},"reply":{"score":<0 or 0.5>,"feedback":"<1-2 sentences>"},"total":<number>,"overall":"<2-3 sentence encouraging summary>"}`;
+
+  try {
+    const response = await fetch('/.netlify/functions/grade', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1200,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await response.json();
+    const text = data.content.map(i => i.text || '').join('');
+    const result = JSON.parse(text.replace(/```json|```/g, '').trim());
+    showResults(result, q2label, q3label, !!comment, !!reply);
+  } catch (err) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('gradingForm').style.display = 'block';
+    errBar.textContent = 'Something went wrong. Please try again.';
+    errBar.style.display = 'block';
+  }
+}
+
+function scoreClass(score, max) {
+  const p = score / max;
+  return p >= 0.84 ? 'score-full' : p >= 0.5 ? 'score-part' : 'score-low';
+}
+
+function showResults(r, q2label, q3label, hasComment, hasReply) {
+  document.getElementById('loading').style.display = 'none';
+  const questions = [
+    { key: 'q1', title: 'Question 1 — Argument by Analogy', max: 3 },
+    { key: 'q2', title: 'Question 2 — ' + q2label, max: 3 },
+    { key: 'q3', title: 'Question 3 — ' + q3label, max: 3 },
+    ...(hasComment ? [{ key: 'comment', title: "Comment on classmate's post", max: 0.5 }] : []),
+    ...(hasReply   ? [{ key: 'reply',   title: 'Reply to comment on your post', max: 0.5 }] : []),
+  ];
+
+  let html = `<div class="result-header"><h2>Draft Feedback</h2><span class="total-pill">${r.total} / 10</span></div><div class="result-body">`;
+  questions.forEach(({ key, title, max }) => {
+    const d = r[key];
+    const sc = scoreClass(d.score, max);
+    html += `<div class="q-result"><div class="q-result-head"><strong>${title}</strong><span class="score-badge ${sc}">${d.score} / ${max}</span></div>`;
+    if (d.earned)   html += `<div class="feedback-label">What you did well</div><p>${d.earned}</p>`;
+    if (d.improve)  html += `<div class="feedback-label">How to improve</div><p>${d.improve}</p>`;
+    if (d.feedback) html += `<p style="margin-top:0.3rem;">${d.feedback}</p>`;
+    html += `</div>`;
+  });
+  html += `<div class="q-result"><div class="feedback-label">Overall</div><p>${r.overall}</p></div>`;
+  html += `<div class="disclaimer"><strong>Remember:</strong> This is a <em>draft feedback tool</em>, not your official grade. Your instructor's final grade may differ. Use this feedback to revise and deepen your thinking before submitting.</div>`;
+  html += `</div><button class="try-again" onclick="resetForm()">Revise and check again</button>`;
+
+  document.getElementById('results').innerHTML = html;
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+}
+
+function resetForm() {
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('gradingForm').style.display = 'block';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>
